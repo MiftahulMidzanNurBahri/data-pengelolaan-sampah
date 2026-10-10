@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 import analisis_sem_pls as analysis
@@ -167,6 +168,30 @@ def test_figure_closes_when_image_save_fails(tmp_path, monkeypatch, varied_respo
     assert len(closed_figures) == 1
 
 
+def test_completeness_pie_excludes_fully_blank_rows(tmp_path, monkeypatch, question_columns):
+    data = pd.DataFrame(
+        [["R1", *([4] * 15)], ["R2", 4, "teks", *([4] * 13)], ["", *([""] * 15)]],
+        columns=["Respondent_ID", *question_columns],
+        dtype=object,
+    )
+    numeric_data, _ = analysis.clean_likert_responses(data, 1, 5)
+    recorded = {}
+    original_pie = Axes.pie
+
+    def capture_pie(axis, values, *args, **kwargs):
+        recorded["values"] = list(values)
+        recorded["labels"] = kwargs["labels"]
+        return original_pie(axis, values, *args, **kwargs)
+
+    monkeypatch.setattr(Axes, "pie", capture_pie)
+
+    output_file = analysis.create_respondent_completeness_pie_chart(data, numeric_data, tmp_path)
+
+    assert output_file.is_file()
+    assert recorded["values"] == [1, 1]
+    assert recorded["labels"] == ["Lengkap (n=1)", "Tidak lengkap (n=1)"]
+
+
 def test_cli_keeps_csv_outputs_when_boxplot_save_fails(tmp_path, monkeypatch, capfd, varied_responses):
     csv_file = tmp_path / "responses.csv"
     output_dir = tmp_path / "new_output"
@@ -236,6 +261,9 @@ def test_cli_reports_mixed_synthetic_data_without_excluding_rows(tmp_path, quest
     assert (output_dir / "laporan_kualitas_responden.csv").is_file()
     assert (output_dir / "boxplot_skor_konstruk.png").is_file()
     assert (output_dir / "heatmap_korelasi_konstruk.png").is_file()
+    assert (output_dir / "grafik_batang_mean_konstruk.png").is_file()
+    assert (output_dir / "grafik_garis_mean_indikator.png").is_file()
+    assert (output_dir / "grafik_pie_kelengkapan_responden.png").is_file()
 
 
 @pytest.mark.parametrize(

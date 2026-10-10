@@ -490,6 +490,74 @@ def create_correlation_heatmap(  # Menggambar korelasi Pearson antar-konstruk.
         plt.close(figure)  # Menutup kanvas untuk membebaskan memori.
 
 
+def create_construct_mean_bar_chart(scores: pd.DataFrame, output_dir: Path) -> Path:  # Membandingkan mean skor antar-konstruk.
+    means = scores.mean().dropna()  # Menggunakan skor konstruk valid yang sudah dihitung.
+    if means.empty:  # Memastikan setidaknya satu konstruk memiliki skor.
+        raise ValueError("Tidak ada skor konstruk valid untuk dibuat grafik batang.")  # Menjelaskan kondisi tanpa gambar.
+    figure, axis = plt.subplots(figsize=(12, 6), constrained_layout=True)  # Menyiapkan kanvas perbandingan.
+    try:  # Memastikan figure ditutup ketika pembuatan atau penyimpanan gagal.
+        bars = axis.bar(means.index, means.values, color=sns.color_palette("Set2", n_colors=len(means)))  # Menggambar mean setiap konstruk.
+        axis.bar_label(bars, fmt="%.2f", padding=3)  # Menampilkan nilai mean di atas batang.
+        axis.set_title("Rata-rata Skor per Konstruk", fontsize=15, weight="bold")  # Memberi judul grafik.
+        axis.set_xlabel("Konstruk")  # Menamai sumbu konstruk.
+        axis.set_ylabel("Skor rata-rata")  # Menamai sumbu nilai.
+        axis.tick_params(axis="x", rotation=15)  # Memiringkan label untuk mengurangi tumpang tindih.
+        axis.set_ylim(bottom=0)  # Mempertahankan baseline nol untuk perbandingan batang.
+        output_file = output_dir / "grafik_batang_mean_konstruk.png"  # Menetapkan nama file keluaran.
+        figure.savefig(output_file, dpi=300, bbox_inches="tight")  # Menyimpan grafik beresolusi tinggi.
+        return output_file  # Mengembalikan lokasi grafik.
+    finally:  # Membebaskan resource walau plotting atau penyimpanan melempar error.
+        plt.close(figure)  # Menutup kanvas.
+
+
+def create_indicator_mean_line_chart(numeric_data: pd.DataFrame, output_dir: Path) -> Path:  # Menampilkan pola mean antarindikator.
+    means = numeric_data.mean().dropna()  # Menggunakan jawaban valid per indikator.
+    if means.empty:  # Memastikan ada indikator dengan jawaban valid.
+        raise ValueError("Tidak ada jawaban indikator valid untuk dibuat grafik garis.")  # Menjelaskan kondisi tanpa gambar.
+    figure, axis = plt.subplots(figsize=(12, 6), constrained_layout=True)  # Menyiapkan kanvas grafik indikator.
+    try:  # Memastikan figure ditutup ketika pembuatan atau penyimpanan gagal.
+        axis.plot(means.index, means.values, marker="o", linewidth=2, color="#287A70")  # Menghubungkan mean sesuai urutan indikator, bukan waktu.
+        axis.set_title("Rata-rata Skor Tiap Indikator", fontsize=15, weight="bold")  # Memberi judul grafik.
+        axis.set_xlabel("Indikator")  # Menamai sumbu indikator.
+        axis.set_ylabel("Skor rata-rata")  # Menamai sumbu nilai.
+        axis.grid(axis="y", linestyle="--", alpha=0.35)  # Membantu membandingkan nilai.
+        output_file = output_dir / "grafik_garis_mean_indikator.png"  # Menetapkan nama file keluaran.
+        figure.savefig(output_file, dpi=300, bbox_inches="tight")  # Menyimpan grafik beresolusi tinggi.
+        return output_file  # Mengembalikan lokasi grafik.
+    finally:  # Membebaskan resource walau plotting atau penyimpanan melempar error.
+        plt.close(figure)  # Menutup kanvas.
+
+
+def create_respondent_completeness_pie_chart(  # Membandingkan respons lengkap dengan tidak lengkap.
+    data: pd.DataFrame,  # Tabel sumber untuk mengenali baris kosong sepenuhnya.
+    numeric_data: pd.DataFrame,  # Jawaban indikator setelah validasi.
+    output_dir: Path,  # Folder keluaran grafik.
+) -> Path:  # Mengembalikan lokasi file gambar.
+    has_response = nonempty_response_rows(data)  # Mengecualikan baris kosong sepenuhnya dari denominator.
+    complete_count = int((has_response & numeric_data.notna().all(axis=1)).sum())  # Menghitung respons terisi dengan semua indikator valid.
+    incomplete_count = int((has_response & ~numeric_data.notna().all(axis=1)).sum())  # Menghitung respons terisi yang belum lengkap.
+    counts = [complete_count, incomplete_count]  # Menjaga urutan kategori tetap konsisten.
+    if sum(counts) == 0:  # Pie chart tidak bermakna tanpa respons.
+        raise ValueError("Tidak ada baris respons untuk dibuat grafik pie kelengkapan.")  # Menjelaskan kondisi tanpa gambar.
+    visible = [(label, count) for label, count in zip(("Lengkap", "Tidak lengkap"), counts) if count > 0]  # Menghindari irisan nol.
+    figure, axis = plt.subplots(figsize=(8, 7), constrained_layout=True)  # Menyiapkan kanvas proporsional.
+    try:  # Memastikan figure ditutup ketika pembuatan atau penyimpanan gagal.
+        axis.pie(  # Menggambar proporsi kelengkapan seluruh respons nonkosong.
+            [count for _, count in visible],  # Menggunakan hitungan yang sudah dihitung.
+            labels=[f"{label} (n={count})" for label, count in visible],  # Menampilkan kategori dan jumlah.
+            autopct="%1.1f%%",  # Menampilkan persentase tiap kategori.
+            startangle=90,  # Memulai irisan dari arah atas.
+            colors=sns.color_palette("Set2", n_colors=len(visible)),  # Membedakan kategori dengan palet konsisten.
+        )  # Menyelesaikan pie chart.
+        axis.set_title("Kelengkapan Respons", fontsize=15, weight="bold")  # Memberi judul grafik.
+        axis.axis("equal")  # Menjaga lingkaran tetap bulat.
+        output_file = output_dir / "grafik_pie_kelengkapan_responden.png"  # Menetapkan nama file keluaran.
+        figure.savefig(output_file, dpi=300, bbox_inches="tight")  # Menyimpan grafik beresolusi tinggi.
+        return output_file  # Mengembalikan lokasi grafik.
+    finally:  # Membebaskan resource walau plotting atau penyimpanan melempar error.
+        plt.close(figure)  # Menutup kanvas.
+
+
 def main() -> None:  # Menjalankan seluruh alur analisis dari CLI.
     args = parse_args()  # Membaca path masukan, folder keluaran, dan batas Likert.
     if args.likert_min >= args.likert_max:  # Memastikan rentang Likert memiliki urutan yang masuk akal.
@@ -529,6 +597,21 @@ def main() -> None:  # Menjalankan seluruh alur analisis dari CLI.
         except (ValueError, OSError) as error:  # Menangani data tidak memadai atau kegagalan tulis gambar.
             heatmap_file = None  # Menandai heatmap tidak tersedia.
             heatmap_warning = str(error)  # Menyimpan alasan grafik tidak dibuat.
+        try:  # Menambahkan grafik pembanding mean konstruk tanpa mengubah skor.
+            construct_bar_file = create_construct_mean_bar_chart(mean_scores, args.output_dir)  # Membuat grafik batang dari skor yang tersedia.
+        except (ValueError, OSError) as error:  # Menjaga ekspor tabel tetap selesai bila grafik gagal.
+            construct_bar_file = None  # Menandai grafik batang tidak tersedia.
+            construct_bar_warning = str(error)  # Menyimpan alasan grafik tidak dibuat.
+        try:  # Menambahkan grafik pola mean indikator.
+            indicator_line_file = create_indicator_mean_line_chart(numeric_data, args.output_dir)  # Membuat grafik garis dari indikator bersih.
+        except (ValueError, OSError) as error:  # Menjaga ekspor tabel tetap selesai bila grafik gagal.
+            indicator_line_file = None  # Menandai grafik garis tidak tersedia.
+            indicator_line_warning = str(error)  # Menyimpan alasan grafik tidak dibuat.
+        try:  # Menambahkan ringkasan proporsi kelengkapan respons.
+            completeness_pie_file = create_respondent_completeness_pie_chart(data, numeric_data, args.output_dir)  # Mengabaikan baris kosong sepenuhnya.
+        except (ValueError, OSError) as error:  # Menjaga ekspor tabel tetap selesai bila grafik gagal.
+            completeness_pie_file = None  # Menandai pie chart tidak tersedia.
+            completeness_pie_warning = str(error)  # Menyimpan alasan grafik tidak dibuat.
     except (FileNotFoundError, OSError, ValueError) as error:  # Menangkap kesalahan file, konfigurasi, atau kualitas data.
         raise SystemExit(f"Analisis gagal: {error}") from error  # Mengakhiri program dengan pesan ringkas.
     print("Statistik deskriptif skor konstruk:")  # Menampilkan ringkasan statistik ke terminal.
@@ -550,6 +633,9 @@ def main() -> None:  # Menjalankan seluruh alur analisis dari CLI.
     print(f"Statistik indikator+konstruk: {comprehensive_statistics_file}")  # Menampilkan tabel statistik lengkap.
     print(f"Boxplot: {boxplot_file or boxplot_warning}")  # Menampilkan grafik atau alasan tidak dibuat.
     print(f"Heatmap: {heatmap_file or heatmap_warning}")  # Menampilkan grafik atau alasan tidak dibuat.
+    print(f"Grafik batang mean konstruk: {construct_bar_file or construct_bar_warning}")  # Menampilkan grafik batang atau alasannya.
+    print(f"Grafik garis mean indikator: {indicator_line_file or indicator_line_warning}")  # Menampilkan grafik garis atau alasannya.
+    print(f"Grafik pie kelengkapan responden: {completeness_pie_file or completeness_pie_warning}")  # Menampilkan pie chart atau alasannya.
     print(f"Statistik CSV: {args.output_dir / 'statistik_deskriptif_konstruk.csv'}")  # Menampilkan lokasi tabel statistik.
     print(f"Skor per responden: {args.output_dir / 'skor_konstruk_per_responden.csv'}")  # Menampilkan lokasi rekap total dan rata-rata.
 

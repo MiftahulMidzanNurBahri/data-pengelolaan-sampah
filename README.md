@@ -61,7 +61,12 @@ Secara default output ditulis ke `hasil_analisis/`; gunakan `--output-dir` untuk
 - `skor_konstruk_per_responden.csv`: skor mean dan total per responden; bukan pengganti data indikator untuk estimasi SEM.
 - `statistik_deskriptif.csv`: statistik indikator dan konstruk; indikator juga memuat frekuensi dan persentase tiap nilai skala.
 - `statistik_deskriptif_konstruk.csv`: output konstruk saja untuk kompatibilitas dengan format lama.
-- `boxplot_skor_konstruk.png` dan `heatmap_korelasi_konstruk.png`: grafik 300 DPI. Heatmap memakai korelasi Pearson deskriptif dan bukan hasil uji jalur.
+- `boxplot_skor_konstruk.png` dan `heatmap_korelasi_konstruk.png`: grafik 300 DPI yang sudah tersedia. Heatmap memakai korelasi Pearson deskriptif dan bukan hasil uji jalur.
+- `grafik_batang_mean_konstruk.png`: perbandingan rata-rata skor valid tiap konstruk.
+- `grafik_garis_mean_indikator.png`: rata-rata jawaban valid per indikator dalam urutan Q1-Q15; garis menunjukkan urutan butir, bukan tren waktu.
+- `grafik_pie_kelengkapan_responden.png`: proporsi respons nonkosong yang lengkap/tidak lengkap. Baris kosong sepenuhnya tidak masuk denominator.
+
+Ketiga grafik tambahan dibuat sebagai PNG 300 DPI. Kegagalan membuat grafik dilaporkan di terminal dan tidak mengubah hasil tabel atau data sumber.
 
 ## Alur SmartPLS yang masih manual
 
