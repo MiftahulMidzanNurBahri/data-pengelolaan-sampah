@@ -35,6 +35,8 @@ Nilai respons harus integer dalam rentang yang dipilih; pecahan seperti `2.5` di
 
 CSV wajib memuat satu kolom untuk setiap Q1 sampai Q15. Kapitalisasi Q/q dinormalisasi. Kolom tambahan diperbolehkan; kolom ID umum seperti `Respondent_ID` dipertahankan pada ekspor, tetapi tidak dipakai sebagai indikator. Delimiter koma, titik koma, tab, dan pipe dideteksi; encoding UTF-8/UTF-8-BOM dan Windows-1252 didukung.
 
+Batas input adalah maksimal 150 baris respons nonkosong. Baris kosong sepenuhnya tidak dihitung sebagai responden. Jika terdapat 151 atau lebih, program menolak file sebelum memuat tabel dan tidak memotong atau menghapus respons secara otomatis.
+
 Contoh header:
 
 ```csv
@@ -44,6 +46,8 @@ R01,4,4,4,1,2,1,5,2,3,3,4,3,3,2,3
 
 Nilai teks Likert, nilai di luar rentang, dan sel kosong tidak dikonversi menjadi jawaban valid. Semuanya menjadi missing pada salinan bersih dan dirinci di laporan kualitas data. Tidak ada imputasi atau penghapusan baris. Skor konstruk hanya dihitung jika ketiga indikator konstruk valid; total berkisar 3-15 dan mean berkisar sesuai rentang Likert.
 
+Baris kosong yang terbaca dipertahankan dan dilaporkan terpisah, bukan dianggap responden incomplete. Baris berpola seragam, pola jawaban duplikat, atau ID duplikat hanya diberi flag untuk pemeriksaan manual; tidak ada penghapusan otomatis. Header ID dikenali tanpa membedakan kapitalisasi, spasi, dan tanda baca. Jika ada beberapa kolom ID yang dikenal, semuanya membentuk composite ID dan seluruh komponennya harus terisi untuk dihitung unik/duplikat; ID parsial dilaporkan terpisah. Status kualitas merangkum temuan format/nilai, bukan sertifikasi validitas instrumen atau kejujuran responden.
+
 ## Output
 
 Secara default output ditulis ke `hasil_analisis/`; gunakan `--output-dir` untuk memilih folder lain.
@@ -51,6 +55,8 @@ Secara default output ditulis ke `hasil_analisis/`; gunakan `--output-dir` untuk
 - `data_indikator_bersih.csv`: ID opsional dan setiap indikator Q1-Q15 sebagai kolom terpisah. Missing direpresentasikan sebagai sel kosong. Gunakan file ini untuk impor indikator ke SmartPLS; jangan tetapkan kolom ID sebagai indikator/model variable.
 - `laporan_missing_values.csv`: laporan kualitas per indikator, termasuk missing asli/pasca-cleaning, nilai nonnumerik, desimal, di luar rentang, jumlah valid, persentase missing, dan jumlah kategori valid. Frekuensi jawaban ada di statistik deskriptif.
 - `laporan_kualitas_responden.csv`: jumlah/persentase missing per responden serta flag missing tinggi, pola seragam, jawaban duplikat, dan ID duplikat. Flag hanya untuk pemeriksaan manual.
+- `laporan_kualitas_data.csv`: ringkasan jumlah sel diperiksa/valid/missing/invalid dan status kualitas. Total sel invalid dihitung dari sel missing di matriks bersih, jadi satu sel hanya dihitung sekali walaupun termasuk beberapa kategori pemeriksaan. Persentasenya memakai seluruh sel indikator sebagai penyebut.
+- `laporan_jumlah_sampel.csv`: baris awal/kosong/respons nonkosong, ID terisi/kosong/parsial/unik, baris dengan ID duplikat, responden lengkap/tidak lengkap, responden berperingatan missing, jumlah dipertahankan/dikeluarkan, N per konstruk/indikator, dan N/status tiap korelasi pairwise. `jumlah_id_duplikat` berarti jumlah baris yang terlibat dalam ID berulang, bukan bukti respons tidak sah. Metrik ID ditulis kosong jika kolom ID tidak tersedia; korelasi berstatus tidak terdefinisi jika N < 2 atau variasi tidak memadai.
 - `ringkasan_pemrosesan.csv`: jumlah baris awal, dipertahankan, dan dikeluarkan. Skrip saat ini tidak menghapus baris otomatis.
 - `skor_konstruk_per_responden.csv`: skor mean dan total per responden; bukan pengganti data indikator untuk estimasi SEM.
 - `statistik_deskriptif.csv`: statistik indikator dan konstruk; indikator juga memuat frekuensi dan persentase tiap nilai skala.
@@ -73,7 +79,10 @@ Proyek saat ini tidak menghitung metrik tersebut. Jangan menafsirkan mean/korela
 ## Validasi lokal
 
 ```powershell
-python -m unittest discover -s tests -v
+python -m pip install -r requirements-dev.txt
+python -m pytest -v
 ```
+
+`pytest` adalah dependency pengembangan dan tidak diperlukan untuk menjalankan pipeline CLI. Pytest juga menjalankan regression tests lama berbasis `unittest`.
 
 Data sintetis hanya untuk menguji pipeline, bukan temuan empiris. Kecukupan sampel perlu dinilai terhadap kompleksitas model dan rancangan analisis; jumlah baris saja tidak membuktikannya.
